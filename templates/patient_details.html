@@ -1,0 +1,319 @@
+{% extends "base.html" %}
+
+{% block title %}Patient Details - Clinical AI Support System{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Patient Header -->
+    <div class="col-12 mb-4">
+        <div class="card">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-8">
+                        <h2><i class="fas fa-user me-2"></i>{{ patient.first_name }} {{ patient.last_name }}</h2>
+                        <p class="text-muted mb-0">
+                            <i class="fas fa-id-card me-2"></i>Tracking Number: <strong>{{ patient.tracking_number }}</strong>
+                        </p>
+                        <p class="text-muted mb-0">
+                            <i class="fas fa-birthday-cake me-2"></i>Date of Birth: {{ patient.date_of_birth.strftime('%B %d, %Y') }}
+                        </p>
+                        <p class="text-muted mb-0">
+                            <i class="fas fa-venus-mars me-2"></i>Gender: {{ patient.gender }}
+                        </p>
+                        <p class="text-muted mb-0">
+                            <i class="fas fa-phone me-2"></i>Phone: {{ patient.phone or 'Not provided' }}
+                        </p>
+                        <p class="text-muted">
+                            <i class="fas fa-envelope me-2"></i>Email: {{ patient.email or 'Not provided' }}
+                        </p>
+                    </div>
+                    <div class="col-md-4 text-end">
+                        <span class="badge bg-{{ 'success' if patient.status == 'discharged' else 'primary' if patient.status == 'in_treatment' else 'secondary' }} fs-6 mb-2">
+                            {{ patient.status.replace('_', ' ').title() }}
+                        </span>
+                        <br>
+                        <small class="text-muted">Last Updated: {{ patient.updated_at.strftime('%m/%d/%Y %H:%M') }}</small>
+                        <div class="mt-3">
+                            {% if current_user.role == 'doctor' %}
+                            <button class="btn btn-primary me-2" onclick="addMedicalRecord()">
+                                <i class="fas fa-plus me-1"></i>Add Record
+                            </button>
+                            <button class="btn btn-success" onclick="createOrder()">
+                                <i class="fas fa-prescription me-1"></i>Create Order
+                            </button>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Navigation Tabs -->
+    <div class="col-12 mb-4">
+        <ul class="nav nav-tabs" id="patientTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="medical-records-tab" data-bs-toggle="tab" data-bs-target="#medical-records" type="button" role="tab">
+                    <i class="fas fa-file-medical me-2"></i>Medical Records
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="treatment-orders-tab" data-bs-toggle="tab" data-bs-target="#treatment-orders" type="button" role="tab">
+                    <i class="fas fa-clipboard-list me-2"></i>Treatment Orders
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="patient-info-tab" data-bs-toggle="tab" data-bs-target="#patient-info" type="button" role="tab">
+                    <i class="fas fa-info-circle me-2"></i>Patient Information
+                </button>
+            </li>
+        </ul>
+    </div>
+    
+    <!-- Tab Content -->
+    <div class="col-12">
+        <div class="tab-content" id="patientTabsContent">
+            <!-- Medical Records Tab -->
+            <div class="tab-pane fade show active" id="medical-records" role="tabpanel">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-file-medical me-2"></i>Medical Records</h5>
+                    </div>
+                    <div class="card-body">
+                        {% if medical_records %}
+                        <div class="timeline">
+                            {% for record in medical_records %}
+                            <div class="timeline-item">
+                                <div class="timeline-marker"></div>
+                                <div class="timeline-content">
+                                    <div class="card">
+                                        <div class="card-body">
+                                            <div class="d-flex justify-content-between align-items-start">
+                                                <div>
+                                                    <h6 class="card-title">{{ record.visit_date.strftime('%B %d, %Y') }}</h6>
+                                                    <p class="text-muted mb-2">Dr. {{ record.doctor.first_name }} {{ record.doctor.last_name }}</p>
+                                                </div>
+                                                <small class="text-muted">{{ record.visit_date.strftime('%H:%M') }}</small>
+                                            </div>
+                                            
+                                            {% if record.diagnosis %}
+                                            <div class="mb-2">
+                                                <strong>Diagnosis:</strong>
+                                                <p class="mb-1">{{ record.diagnosis }}</p>
+                                            </div>
+                                            {% endif %}
+                                            
+                                            {% if record.symptoms %}
+                                            <div class="mb-2">
+                                                <strong>Symptoms:</strong>
+                                                <p class="mb-1">{{ record.symptoms }}</p>
+                                            </div>
+                                            {% endif %}
+                                            
+                                            {% if record.treatment_plan %}
+                                            <div class="mb-2">
+                                                <strong>Treatment Plan:</strong>
+                                                <p class="mb-1">{{ record.treatment_plan }}</p>
+                                            </div>
+                                            {% endif %}
+                                            
+                                            {% if record.medications %}
+                                            <div class="mb-2">
+                                                <strong>Medications:</strong>
+                                                <p class="mb-1">{{ record.medications }}</p>
+                                            </div>
+                                            {% endif %}
+                                            
+                                            {% if record.notes %}
+                                            <div class="mb-2">
+                                                <strong>Notes:</strong>
+                                                <p class="mb-1">{{ record.notes }}</p>
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <div class="text-center text-muted py-4">
+                            <i class="fas fa-file-medical fa-3x mb-3"></i>
+                            <p>No medical records found.</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Treatment Orders Tab -->
+            <div class="tab-pane fade" id="treatment-orders" role="tabpanel">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-clipboard-list me-2"></i>Treatment Orders</h5>
+                    </div>
+                    <div class="card-body">
+                        {% if treatment_orders %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Order Type</th>
+                                        <th>Description</th>
+                                        <th>Priority</th>
+                                        <th>Status</th>
+                                        <th>Doctor</th>
+                                        <th>Nurse</th>
+                                        <th>Created</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for order in treatment_orders %}
+                                    <tr>
+                                        <td>{{ order.order_type.title() }}</td>
+                                        <td>{{ order.description }}</td>
+                                        <td>
+                                            <span class="badge bg-{{ 'danger' if order.priority == 'urgent' else 'warning' if order.priority == 'high' else 'primary' }}">
+                                                {{ order.priority.title() }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-{{ 'success' if order.status == 'completed' else 'warning' if order.status == 'in_progress' else 'secondary' }}">
+                                                {{ order.status.replace('_', ' ').title() }}
+                                            </span>
+                                        </td>
+                                        <td>{{ order.doctor.first_name }} {{ order.doctor.last_name }}</td>
+                                        <td>{{ order.nurse.first_name ~ ' ' ~ order.nurse.last_name if order.nurse else 'Unassigned' }}</td>
+                                        <td>{{ order.created_at.strftime('%m/%d/%Y %H:%M') }}</td>
+                                        <td>
+                                            {% if current_user.role == 'nurse' and order.nurse_id == current_user.id %}
+                                            <button class="btn btn-sm btn-outline-success" onclick="updateOrderStatus({{ order.id }}, 'completed')">
+                                                <i class="fas fa-check"></i>
+                                            </button>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% else %}
+                        <div class="text-center text-muted py-4">
+                            <i class="fas fa-clipboard-list fa-3x mb-3"></i>
+                            <p>No treatment orders found.</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Patient Information Tab -->
+            <div class="tab-pane fade" id="patient-info" role="tabpanel">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-info-circle me-2"></i>Patient Information</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6>Personal Information</h6>
+                                <table class="table table-sm">
+                                    <tr>
+                                        <td><strong>Full Name:</strong></td>
+                                        <td>{{ patient.first_name }} {{ patient.last_name }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Date of Birth:</strong></td>
+                                        <td>{{ patient.date_of_birth.strftime('%B %d, %Y') }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Gender:</strong></td>
+                                        <td>{{ patient.gender }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Phone:</strong></td>
+                                        <td>{{ patient.phone or 'Not provided' }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Email:</strong></td>
+                                        <td>{{ patient.email or 'Not provided' }}</td>
+                                    </tr>
+                                </table>
+                            </div>
+                            <div class="col-md-6">
+                                <h6>Address & Emergency Contact</h6>
+                                <table class="table table-sm">
+                                    <tr>
+                                        <td><strong>Address:</strong></td>
+                                        <td>{{ patient.address or 'Not provided' }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Emergency Contact:</strong></td>
+                                        <td>{{ patient.emergency_contact or 'Not provided' }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Emergency Phone:</strong></td>
+                                        <td>{{ patient.emergency_phone or 'Not provided' }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Registration Date:</strong></td>
+                                        <td>{{ patient.created_at.strftime('%B %d, %Y %H:%M') }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Status:</strong></td>
+                                        <td>
+                                            <span class="badge bg-{{ 'success' if patient.status == 'discharged' else 'primary' if patient.status == 'in_treatment' else 'secondary' }}">
+                                                {{ patient.status.replace('_', ' ').title() }}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function addMedicalRecord() {
+    alert('Add medical record functionality coming soon');
+}
+
+function createOrder() {
+    alert('Create treatment order functionality coming soon');
+}
+
+function updateOrderStatus(orderId, status) {
+    if (confirm(`Mark this order as ${status}?`)) {
+        fetch('/update-order-status', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                order_id: orderId,
+                status: status
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Error updating order status: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error updating order status');
+        });
+    }
+}
+</script>
+{% endblock %}

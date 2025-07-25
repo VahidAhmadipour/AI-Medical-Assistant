@@ -1,0 +1,331 @@
+{% extends "base.html" %}
+
+{% block title %}Nurse Dashboard - Clinical AI Support System{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Header -->
+    <div class="col-12 mb-4">
+        <div class="d-flex justify-content-between align-items-center">
+            <h2><i class="fas fa-user-nurse me-2"></i>Nurse Dashboard</h2>
+            <div>
+                <button class="btn btn-primary" onclick="refreshTasks()">
+                    <i class="fas fa-sync me-2"></i>Refresh Tasks
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Quick Stats -->
+    <div class="col-12 mb-4">
+        <div class="row">
+            <div class="col-md-3">
+                <div class="card bg-primary text-white">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-tasks fa-2x me-3"></i>
+                            <div>
+                                <h4 class="mb-0">{{ assigned_orders|length }}</h4>
+                                <small>Assigned Tasks</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-warning text-white">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-clock fa-2x me-3"></i>
+                            <div>
+                                <h4 class="mb-0">{{ assigned_orders|selectattr('priority', 'equalto', 'urgent')|list|length }}</h4>
+                                <small>Urgent Tasks</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-success text-white">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-users fa-2x me-3"></i>
+                            <div>
+                                <h4 class="mb-0">{{ patients_with_orders|length }}</h4>
+                                <small>Active Patients</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-info text-white">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-bell fa-2x me-3"></i>
+                            <div>
+                                <h4 class="mb-0">{{ alerts|length }}</h4>
+                                <small>Alerts</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Main Content -->
+    <div class="col-md-8">
+        <!-- Assigned Tasks -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5><i class="fas fa-tasks me-2"></i>My Assigned Tasks</h5>
+            </div>
+            <div class="card-body">
+                {% if assigned_orders %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Patient</th>
+                                <th>Task</th>
+                                <th>Priority</th>
+                                <th>Due Date</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for order in assigned_orders %}
+                            <tr>
+                                <td>
+                                    <strong>{{ order.patient.first_name }} {{ order.patient.last_name }}</strong><br>
+                                    <small class="text-muted">{{ order.patient.tracking_number }}</small>
+                                </td>
+                                <td>
+                                    <strong>{{ order.order_type.title() }}</strong><br>
+                                    <small class="text-muted">{{ order.description }}</small>
+                                </td>
+                                <td>
+                                    <span class="badge bg-{{ 'danger' if order.priority == 'urgent' else 'warning' if order.priority == 'high' else 'primary' }}">
+                                        {{ order.priority.title() }}
+                                    </span>
+                                </td>
+                                <td>
+                                    {% if order.due_date %}
+                                        {{ order.due_date.strftime('%m/%d/%Y %H:%M') }}
+                                    {% else %}
+                                        <span class="text-muted">No due date</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <span class="badge bg-{{ 'success' if order.status == 'completed' else 'warning' if order.status == 'in_progress' else 'secondary' }}">
+                                        {{ order.status.replace('_', ' ').title() }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        <button class="btn btn-outline-primary" onclick="viewPatient({{ order.patient.id }})">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                        <button class="btn btn-outline-success" onclick="startTask({{ order.id }})">
+                                            <i class="fas fa-play"></i>
+                                        </button>
+                                        <button class="btn btn-outline-info" onclick="completeTask({{ order.id }})">
+                                            <i class="fas fa-check"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center text-muted py-4">
+                    <i class="fas fa-tasks fa-3x mb-3"></i>
+                    <p>No assigned tasks at the moment.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Active Patients -->
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-users me-2"></i>Active Patients</h5>
+            </div>
+            <div class="card-body">
+                {% if patients_with_orders %}
+                <div class="row">
+                    {% for patient in patients_with_orders %}
+                    <div class="col-md-6 mb-3">
+                        <div class="card">
+                            <div class="card-body">
+                                <h6 class="card-title">{{ patient.first_name }} {{ patient.last_name }}</h6>
+                                <p class="card-text">
+                                    <small class="text-muted">Tracking: {{ patient.tracking_number }}</small><br>
+                                    <span class="badge bg-{{ 'success' if patient.status == 'discharged' else 'primary' }}">
+                                        {{ patient.status.title() }}
+                                    </span>
+                                </p>
+                                <div class="d-flex justify-content-between">
+                                    <a href="{{ url_for('patient_details', patient_id=patient.id) }}" class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-eye me-1"></i>View Details
+                                    </a>
+                                    <small class="text-muted">Updated: {{ patient.updated_at.strftime('%m/%d') if patient.updated_at else 'N/A' }}</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center text-muted py-4">
+                    <i class="fas fa-users fa-3x mb-3"></i>
+                    <p>No active patients with orders.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Sidebar -->
+    <div class="col-md-4">
+        <!-- Alerts -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5><i class="fas fa-bell me-2"></i>Alerts & Notifications</h5>
+            </div>
+            <div class="card-body">
+                {% if alerts %}
+                {% for alert in alerts %}
+                <div class="alert alert-{{ 'danger' if alert.alert_type == 'urgent' else 'warning' if alert.alert_type == 'reminder' else 'info' }} alert-dismissible fade show" role="alert">
+                    <strong>{{ alert.title }}</strong><br>
+                    {{ alert.message }}
+                    <small class="d-block text-muted mt-1">{{ alert.created_at.strftime('%m/%d/%Y %H:%M') if alert.created_at else 'N/A' }}</small>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+                {% endfor %}
+                {% else %}
+                <div class="text-center text-muted py-4">
+                    <i class="fas fa-bell fa-3x mb-3"></i>
+                    <p>No alerts.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Quick Actions -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5><i class="fas fa-bolt me-2"></i>Quick Actions</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <button class="btn btn-outline-primary" onclick="viewSchedule()">
+                        <i class="fas fa-calendar me-2"></i>View Schedule
+                    </button>
+                    <button class="btn btn-outline-success" onclick="medicationReminder()">
+                        <i class="fas fa-pills me-2"></i>Medication Reminder
+                    </button>
+                    <button class="btn btn-outline-info" onclick="vitalsCheck()">
+                        <i class="fas fa-heartbeat me-2"></i>Vitals Check
+                    </button>
+                    <button class="btn btn-outline-warning" onclick="reportIssue()">
+                        <i class="fas fa-exclamation-triangle me-2"></i>Report Issue
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Today's Summary -->
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-chart-pie me-2"></i>Today's Summary</h5>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-6">
+                        <h4 class="text-success">{{ assigned_orders|selectattr('status', 'equalto', 'completed')|list|length }}</h4>
+                        <small class="text-muted">Completed</small>
+                    </div>
+                    <div class="col-6">
+                        <h4 class="text-warning">{{ assigned_orders|selectattr('status', 'equalto', 'pending')|list|length }}</h4>
+                        <small class="text-muted">Pending</small>
+                    </div>
+                </div>
+                <hr>
+                <div class="text-center">
+                    <small class="text-muted">Keep up the great work!</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function viewPatient(patientId) {
+    window.location.href = `/patient/${patientId}`;
+}
+
+function startTask(orderId) {
+    if (confirm('Start this task?')) {
+        updateTaskStatus(orderId, 'in_progress');
+    }
+}
+
+function completeTask(orderId) {
+    if (confirm('Mark this task as completed?')) {
+        updateTaskStatus(orderId, 'completed');
+    }
+}
+
+function updateTaskStatus(orderId, status) {
+    fetch('/update-order-status', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            order_id: orderId,
+            status: status
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert('Error updating task status: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error updating task status');
+    });
+}
+
+function refreshTasks() {
+    location.reload();
+}
+
+function viewSchedule() {
+    alert('Schedule view functionality coming soon');
+}
+
+function medicationReminder() {
+    alert('Medication reminder functionality coming soon');
+}
+
+function vitalsCheck() {
+    alert('Vitals check functionality coming soon');
+}
+
+function reportIssue() {
+    alert('Issue reporting functionality coming soon');
+}
+</script>
+{% endblock %}
